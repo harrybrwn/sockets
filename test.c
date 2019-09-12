@@ -20,7 +20,6 @@ char url[] = "www.google.com";
 #define GET_DATA                                                                                  \
     "GET / HTTP/1.1\r\n"                                                                          \
     "accept: text/html\r\n"                                                                       \
-    "accept-language: en-US\r\n"                                                                  \
     "\r\n"
 char get_req[] = GET_DATA;
 
@@ -113,21 +112,48 @@ int cool()
 
     // this has a weird extra response at the end bc it is encoded in chunks
     // google chunked transfer-encoding.
-    err = s_dial(&s, S_TCP, "www.google.com:80");
+    err = Dial(&s, S_TCP, "www.google.com:80");
     if (err != nil) // hehe... because Go is the best :)
         error("could not connect socket");
 
-    if (s_write(&s, sendline, sizeof(get_req)) != sizeof(get_req))
+    if (Write(&s, sendline, sizeof(get_req)) != sizeof(get_req))
         error("could not write to socket");
 
-    while ((n = read(s._fd, recvline, MAXLINE - 1)) > 0)
+    while ((n = Read(&s, recvline, MAXLINE - 1)) > 0)
         printf("%s", recvline);
 
     if (n < 0)
         error("problem reading from socket");
 
-    s_close(&s);
+    Close(&s);
     return 0;
+}
+
+#define MAXBUF 1024
+
+int example()
+{
+    int err;
+    ssize_t n, reqlen;
+    socket_t s;
+    char recv[MAXBUF], send[MAXBUF];
+
+    err = Dial(&s, S_TCP, "golang.org:80");
+    if (err != nil)
+        error("could not connect socket");
+
+    sprintf(send, "GET / HTTP/1.1\r\n"
+                  "accept: text/html\r\n"
+                  "\r\n");
+    reqlen = sizeof(send) + 1;
+    n = Write(&s, send, MAXBUF);
+    if (n != reqlen)
+        error("could not write to socket");
+
+    while ((n = Read(&s, recv, MAXBUF - 1)))
+        printf("%s", recv);
+
+    return Close(&s);
 }
 
 #ifndef assert
@@ -208,19 +234,20 @@ int test_grab_header_key()
 int test_dial()
 {
     socket_t s;
-    assert(s_dial(&s, 23, "www.google.com:80") == -1);
+    assert(Dial(&s, 23, "www.google.com:80") == -1);
 
-    assert(s_dial(&s, S_TCP, "") == -1);
+    assert(Dial(&s, S_TCP, "") == -1);
     free(s.endpoint->address);
     free(s.endpoint);
-    assert(s_dial(&s, S_TCP, "www.google.com:") == -1);
+    assert(Dial(&s, S_TCP, "www.google.com:") == -1);
     free(s.endpoint->address);
     free(s.endpoint);
-    assert(s_dial(&s, S_TCP, "www.google.com") == -1);
+    assert(Dial(&s, S_TCP, "www.google.com") == -1);
     free(s.endpoint->address);
     free(s.endpoint);
-    assert(s_dial(&s, S_TCP, "www.google.com:443") == 0);
-    s_close(&s);
+    bzero(s.endpoint, sizeof(struct s_endpoint));
+    assert(Dial(&s, S_TCP, "www.google.com:443") == 0);
+    Close(&s);
     return 0;
 }
 
@@ -235,8 +262,9 @@ int main()
     RUN_TEST(test_parse_endpoint);
     RUN_TEST(test_port_atoi);
     RUN_TEST(test_grab_header_key);
-    RUN_TEST(test_dial);
+    // RUN_TEST(test_dial);
 
     // return basic();
-    // return cool();
+    return cool();
+    // return example();
 }

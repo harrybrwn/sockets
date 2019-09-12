@@ -33,16 +33,18 @@ typedef enum protocol_type
     S_UDP,
 } protocol_t;
 
-// s_close closes the socket.
-int s_close(socket_t*);
+// Close closes the socket.
+int Close(socket_t*);
 
 // s_dial dials a socket for some protocol.
 // returns 0 on success, s_error for errors, and -1 for errors outside
 // the scope of this library.
-int s_dial(socket_t*, protocol_t, char* endpoint);
+int Dial(socket_t*, protocol_t, char* endpoint);
 
 // s_write will write some data to the socket.
-ssize_t s_write(socket_t* sock, const void* buf, size_t len);
+ssize_t Write(socket_t* sock, const void* buf, size_t len);
+
+ssize_t Read(socket_t* sock, void* buf, size_t len);
 
 // s_listen initializes a socket, binds the address and listens for requests.
 int s_listen();

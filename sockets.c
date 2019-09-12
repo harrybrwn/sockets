@@ -1,6 +1,4 @@
 #include "sockets.h"
-#include "util/map.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,14 +15,14 @@
 static int parse_endpoint(char*, struct s_endpoint*);
 static int s_connect(socket_t* sock);
 
-int s_close(socket_t* sock)
+int Close(socket_t* sock)
 {
     free(sock->endpoint->address);
     free(sock->endpoint);
     return close(sock->_fd);
 }
 
-int s_dial(socket_t* sock, protocol_t proto, char* endpoint)
+int Dial(socket_t* sock, protocol_t proto, char* endpoint)
 {
     char ip_str[INET_ADDRSTRLEN];
 
@@ -58,9 +56,14 @@ static int s_connect(socket_t* sock)
     return connect(sock->_fd, (struct sockaddr*)&sock->_addr, sizeof(struct sockaddr));
 }
 
-ssize_t s_write(socket_t* sock, const void* buf, size_t len)
+ssize_t Write(socket_t* sock, const void* buf, size_t len)
 {
     return write(sock->_fd, buf, len);
+}
+
+ssize_t Read(socket_t* sock, void* buf, size_t len)
+{
+    return read(sock->_fd, buf, len);
 }
 
 int resolve_hosturl(char* hosturl, char buf[INET_ADDRSTRLEN])
