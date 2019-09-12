@@ -1,0 +1,11 @@
+# Tooling
+.vscode
+.clang-format
+
+# Bin
+test
+*.o
+
+# May not need this folder
+/util/
+
