@@ -24,11 +24,9 @@ int s_close(socket_t* sock)
     return close(sock->_fd);
 }
 
-// TODO: create error codes for s_dial return
 int s_dial(socket_t* sock, protocol_t proto, char* endpoint)
 {
     char ip_str[INET_ADDRSTRLEN];
-    struct s_endpoint* ep;
 
     if (proto == S_TCP)
     {
@@ -39,21 +37,19 @@ int s_dial(socket_t* sock, protocol_t proto, char* endpoint)
         INET_SOCKET_INIT(sock, SOCK_DGRAM, IPPROTO_UDP);
     }
     else
-        return -1;
+        return ERR_BAD_PROTOCOL;
 
-    ep = malloc(sizeof(struct s_endpoint));
-    ep->address = malloc(strlen(endpoint));
-    if (parse_endpoint(endpoint, ep) != 0)
-        return -1;
+    sock->endpoint = malloc(sizeof(struct s_endpoint));
+    sock->endpoint->address = malloc(strlen(endpoint) + 1);
+    if (parse_endpoint(endpoint, sock->endpoint) != 0)
+        return ERR_BAD_ADDRESS;
 
-    sock->endpoint = ep;
-    sock->_addr.sin_port = htons(ep->port);
+    sock->_addr.sin_port = htons(sock->endpoint->port);
 
-    if (resolve_hosturl(ep->address, ip_str) != 0)
+    if (resolve_hosturl(sock->endpoint->address, ip_str) != 0)
+        return ERR_HOST_RESOLVE;
+    if (inet_pton(AF_INET, ip_str, &sock->_addr.sin_addr) != 1)
         return -1;
-    if (inet_pton(AF_INET, ip_str, &sock->_addr.sin_addr) < 0)
-        return -1;
-
     return s_connect(sock);
 }
 
@@ -62,7 +58,7 @@ static int s_connect(socket_t* sock)
     return connect(sock->_fd, (struct sockaddr*)&sock->_addr, sizeof(struct sockaddr));
 }
 
-size_t s_write(socket_t* sock, const void* buf, size_t len)
+ssize_t s_write(socket_t* sock, const void* buf, size_t len)
 {
     return write(sock->_fd, buf, len);
 }
@@ -131,6 +127,8 @@ next:
     while ((c = *raw++))
         port[i++] = c;
     port[i] = 0;
+    if (i == 0)
+        return -1;
 
     endpoint->port = port_atoi(port);
     return 0;
