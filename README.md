@@ -15,20 +15,24 @@ int main()
     socket_t s;
     char recv[MAXBUF], send[MAXBUF];
 
-    err = Dial(&s, S_TCP, "golang.org:80");
-    if (err != nil)
-        error("could not connect socket");
-
     sprintf(send, "GET / HTTP/1.1\r\n"
                   "accept: text/html\r\n"
                   "\r\n");
-    reqlen = sizeof(send) + 1;
-    n = Write(&s, send, MAXBUF);
-    if (n != reqlen)
-        error("could not write to socket");
+    reqlen = strlen(send) + 1;
 
-    while ((n = Read(&s, recv, MAXBUF - 1)))
+    err = Dial(&s, S_TCP, "golang.org:80");
+    if (err != nil) {
+        error("could not connect socket");
+    }
+
+    n = Write(&s, send, reqlen);
+    if (n != reqlen) {
+        error("could not write to socket");
+    }
+
+    while ((n = Read(&s, recv, MAXBUF - 1)) > 0) {
         printf("%s", recv);
+    }
 
     return Close(&s);
 }

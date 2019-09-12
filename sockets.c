@@ -12,9 +12,6 @@
     bzero(&SOCK->_addr, sizeof(SOCK->_addr));                                                     \
     SOCK->_addr.sin_family = AF_INET;
 
-static int parse_endpoint(char*, struct s_endpoint*);
-static int s_connect(socket_t* sock);
-
 int Close(socket_t* sock)
 {
     free(sock->endpoint->address);
@@ -22,19 +19,14 @@ int Close(socket_t* sock)
     return close(sock->_fd);
 }
 
+static int parse_endpoint(char*, struct s_endpoint*);
+static inline int init_socket(socket_t*, protocol_t);
+
 int Dial(socket_t* sock, protocol_t proto, char* endpoint)
 {
     char ip_str[INET_ADDRSTRLEN];
 
-    if (proto == S_TCP)
-    {
-        INET_SOCKET_INIT(sock, SOCK_STREAM, IPPROTO_TCP);
-    }
-    else if (proto == S_UDP)
-    {
-        INET_SOCKET_INIT(sock, SOCK_DGRAM, IPPROTO_UDP);
-    }
-    else
+    if (init_socket(sock, proto) == -1)
         return ERR_BAD_PROTOCOL;
 
     sock->endpoint = malloc(sizeof(struct s_endpoint));
@@ -48,12 +40,39 @@ int Dial(socket_t* sock, protocol_t proto, char* endpoint)
         return ERR_HOST_RESOLVE;
     if (inet_pton(AF_INET, ip_str, &sock->_addr.sin_addr) != 1)
         return -1;
-    return s_connect(sock);
+    return connect(sock->_fd, (struct sockaddr*)&sock->_addr, sizeof(struct sockaddr));
 }
 
-static int s_connect(socket_t* sock)
+#define sa struct sockaddr
+
+int Listen(socket_t* sock, protocol_t proto, char* endpoint)
 {
-    return connect(sock->_fd, (struct sockaddr*)&sock->_addr, sizeof(struct sockaddr));
+    int enable_opt = 1;
+
+    if (init_socket(sock, proto) == -1)
+        return ERR_BAD_PROTOCOL;
+
+    sock->endpoint = malloc(sizeof(struct s_endpoint));
+    sock->endpoint->address = malloc(strlen(endpoint) + 1);
+    if (parse_endpoint(endpoint, sock->endpoint) != 0)
+        return ERR_BAD_ADDRESS;
+
+    sock->_addr.sin_port = htons(sock->endpoint->port);
+    if (endpoint[0] == ':') {
+        sock->_addr.sin_addr.s_addr = INADDR_ANY;
+    } else {
+        if (inet_pton(AF_INET, sock->endpoint->address, &sock->_addr.sin_addr) != 1)
+            return ERR_BAD_ADDRESS;
+    }
+
+    if (setsockopt(sock->_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &enable_opt, sizeof(int)) != 0) {
+        return ERR_SOCK_OPTS;
+    }
+    if (bind(sock->_fd, (sa*)&sock->_addr, sizeof(sa)) != 0) {
+        return ERR_ADDRESS_BIND;
+    }
+
+    return listen(sock->_fd, 5);
 }
 
 ssize_t Write(socket_t* sock, const void* buf, size_t len)
@@ -77,12 +96,24 @@ int resolve_hosturl(char* hosturl, char buf[INET_ADDRSTRLEN])
     addr = (struct in_addr**)host->h_addr_list;
     char* ip = inet_ntoa(*addr[0]);
 
-    while (ip[i])
-    {
+    while (ip[i]) {
         buf[i] = ip[i];
         i++;
     }
     buf[i] = 0;
+    return 0;
+}
+
+static inline int init_socket(socket_t* s, protocol_t proto)
+{
+    if (proto == S_TCP) {
+        INET_SOCKET_INIT(s, SOCK_STREAM, IPPROTO_TCP);
+    }
+    else if (proto == S_UDP) {
+        INET_SOCKET_INIT(s, SOCK_DGRAM, IPPROTO_UDP);
+    }
+    else
+        return -1;
     return 0;
 }
 
@@ -94,8 +125,7 @@ static uint16_t port_atoi(char str[6])
     if (*str == '\0')
         return 0;
 
-    while ((c = *str++))
-    {
+    while ((c = *str++)) {
         if (c < '0' || c > '9')
             return 0;
         n = (n << 3) + (n << 1) + c - '0';
@@ -111,11 +141,9 @@ static int parse_endpoint(char* raw, struct s_endpoint* endpoint)
 
     char c;
     int i = 0;
-    while (1)
-    {
+    while (1) {
         c = *raw++;
-        switch (c)
-        {
+        switch (c) {
         case ':':
             goto next;
         case '\0':
@@ -127,8 +155,9 @@ static int parse_endpoint(char* raw, struct s_endpoint* endpoint)
 next:
 
     i = 0;
-    while ((c = *raw++))
+    while ((c = *raw++)) {
         port[i++] = c;
+    }
     port[i] = 0;
     if (i == 0)
         return -1;
@@ -143,8 +172,7 @@ static char* grab_header_key(char** data)
     int i;
 
     char* raw = *data;
-    for (i = 0; (c = *raw++);)
-    {
+    for (i = 0; (c = *raw++);) {
         if (c == ':')
             break;
         buf[i++] = c;
