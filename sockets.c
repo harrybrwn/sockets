@@ -1,5 +1,6 @@
 #include "sockets.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 // sockets
@@ -71,7 +72,6 @@ int Listen(socket_t* sock, protocol_t proto, char* endpoint)
     if (bind(sock->_fd, (sa*)&sock->_addr, sizeof(sa)) != 0) {
         return ERR_ADDRESS_BIND;
     }
-
     return listen(sock->_fd, 5);
 }
 
@@ -124,8 +124,9 @@ static uint16_t port_atoi(char str[6])
 
     if (*str == '\0')
         return 0;
-
     while ((c = *str++)) {
+        if (c == ' ')
+            continue;
         if (c < '0' || c > '9')
             return 0;
         n = (n << 3) + (n << 1) + c - '0';
@@ -141,10 +142,12 @@ static int parse_endpoint(char* raw, struct s_endpoint* endpoint)
 
     char c;
     int i = 0;
+
     while (1) {
         c = *raw++;
         switch (c) {
         case ':':
+            endpoint->address[i++] = 0;
             goto next;
         case '\0':
             return -1;
@@ -163,6 +166,8 @@ next:
         return -1;
 
     endpoint->port = port_atoi(port);
+    if (endpoint->port == 0) // dont allow port 0... also port_atoi returns 0 on errors
+        return -1;
     return 0;
 }
 
