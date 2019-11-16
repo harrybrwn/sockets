@@ -1,5 +1,5 @@
 # Sockets
-A socket library inspired by the Go standard library.
+A socket library inspired by and imitating the Go standard library.
 
 ## Example
 ```c
