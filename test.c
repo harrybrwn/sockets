@@ -248,39 +248,39 @@ TEST(Dial, ({
          Close(&s);
          return 0;
      }))
-
+// clang-format off
 TEST(Listen, ({
-         char* ip = find_host_ip();
-         int i = strlen(ip);
-         socket_t s;
+    char* ip = find_host_ip();
+    int i = strlen(ip);
+    socket_t s;
 
-         assert_eq(Listen(&s, S_TCP, ":8080"), 0);
-         Close(&s);
-         assert_eq(Listen(&s, S_TCP, ""), ERR_BAD_ADDRESS);
-         FREE_SOCK
-         assert_eq(Listen(&s, S_TCP, "257.0.0.1:8888"), ERR_BAD_ADDRESS);
-         Close(&s);
+    assert_eq(Listen(&s, S_TCP, ":8080"), 0);
+    Close(&s);
+    assert_eq(Listen(&s, S_TCP, ""), ERR_BAD_ADDRESS);
+    FREE_SOCK
+    assert_eq(Listen(&s, S_TCP, "257.0.0.1:8888"), ERR_BAD_ADDRESS);
+    Close(&s);
 
-         ip[i] = ':';
-         ip[i + 1] = '8';
-         ip[i + 2] = '0';
-         ip[i + 3] = '9';
-         ip[i + 4] = '1';
-         ip[i + 5] = '\0';
-         assert_eq(Listen(&s, S_TCP, ip), 0);
-         assert_eq(s.endpoint->port, 8091);
-         Close(&s);
-         ip[i] = 0;
-         assert_eq(Listen(&s, S_TCP, ip), ERR_BAD_ADDRESS);
-         Close(&s);
-         ip[i] = ':';
-         ip[i + 1] = 0;
-         assert_eq(Listen(&s, S_TCP, ip), ERR_BAD_ADDRESS);
-         Close(&s);
+    ip[i] = ':';
+    ip[i + 1] = '8';
+    ip[i + 2] = '0';
+    ip[i + 3] = '9';
+    ip[i + 4] = '1';
+    ip[i + 5] = '\0';
+    assert_eq(Listen(&s, S_TCP, ip), 0);
+    assert_eq(s.endpoint->port, 8091);
+    Close(&s);
+    ip[i] = 0;
+    assert_eq(Listen(&s, S_TCP, ip), ERR_BAD_ADDRESS);
+    Close(&s);
+    ip[i] = ':';
+    ip[i + 1] = 0;
+    assert_eq(Listen(&s, S_TCP, ip), ERR_BAD_ADDRESS);
+    Close(&s);
 
-         free(ip);
-         return 0;
-     }))
+    free(ip);
+    return 0;
+}))
 #undef FREE_SOCK
 
 void print_file(char* fname)
