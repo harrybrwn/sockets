@@ -3,7 +3,7 @@ A socket library inspired by and imitating the Go standard library.
 
 ## Example
 ```c
-#include "socktes.h"
+#include "sockets.h"
 
 #define nil 0 // because Go is awsome... fight me
 #define MAXBUF 1024
@@ -16,7 +16,7 @@ int main()
     char recv[MAXBUF], send[MAXBUF];
 
     sprintf(send, "GET / HTTP/1.1\r\n"
-                  "accept: text/html\r\n"
+                  "Accept: text/html\r\n"
                   "\r\n");
     reqlen = strlen(send) + 1;
 
